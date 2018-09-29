@@ -1,0 +1,7 @@
+.settings/
+.vscode/
+tsconfig.json
+jsconfig.json
+
+node_modules
+dist/main.js
