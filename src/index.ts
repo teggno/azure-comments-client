@@ -6,10 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
     container.appendChild(getCommentUI("post2"));
     container.appendChild(getCommentListUIWithButton("post2"));
   }
-  // commentsForPost("post2").then(comments => {
-  //   const container = document.getElementById("commentContainer");
-  //   if (container) container.appendChild(getCommentTestUI(comments));
-  // });
 });
 
 function getCommentListUIWithButton(postUrl: string) {
@@ -33,7 +29,7 @@ function getCommentListUIWithButton(postUrl: string) {
           list.removeChild(ul);
           ul = getCommentListUI(comments);
           list.appendChild(ul);
-        });  
+        });
       });
       commentsForPost(postUrl).then(comments => {
         list.appendChild(refreshButton);
@@ -74,81 +70,100 @@ function getCommentUI(postUrl: string) {
   div.appendChild(leaveACommentButton);
 
   var isFormVisible: boolean | null = null;
-  var form: HTMLFormElement;
-  var textArea: HTMLTextAreaElement;
+  var formComponent: FormComponent;
+
   leaveACommentButton.addEventListener("click", () => {
     if (isFormVisible === null) {
       // form has never ever been displayed
-      form = document.createElement("form");
-      form.addEventListener("submit", e => e.preventDefault());
-
-      var authorNameTextBox = document.createElement("input");
-      var authorNameLabel = document.createElement("label");
-      authorNameLabel.appendChild(document.createTextNode("Your name"));
-      authorNameLabel.appendChild(authorNameTextBox);
-
-      textArea = document.createElement("textarea");
-      var textAreaLabel = document.createElement("label");
-      textAreaLabel.appendChild(document.createTextNode("Comment"));
-      textAreaLabel.appendChild(textArea);
-
-      var sendButton = document.createElement("button");
-      sendButton.innerHTML = "Send";
-      sendButton.addEventListener("click", () => {
+      formComponent = getForm();
+      formComponent.sendClicked(() => {
+        var input = formComponent.getComment();
         var comment = {
-          text: textArea.value,
-          authorName: authorNameTextBox.value,
+          text: input.text,
+          authorName: input.authorName,
           postUrl: postUrl,
           captchaToken: ""
         };
         if (!validateComment(comment)) {
           return;
         }
+
         (<any>grecaptcha)
-          .execute("6Lc6rXIUAAAAAN16xUNrM3ONA6Gva8hvLku7LEfx", {
+          .execute(getSettings().recaptchaSiteKey(), {
             action: "newComment"
           })
-          .then(function(token: string) {
+          .then((token: string) => {
             comment.captchaToken = token;
             return saveComment(comment).then(() => {
-              grecaptcha.reset();
-              textArea.value = "";
-              authorNameTextBox.value = "";
+              formComponent.reset();
             });
           });
       });
-
-      form.appendChild(textAreaLabel);
-      form.appendChild(authorNameLabel);
-      form.appendChild(sendButton);
-
-      div.appendChild(form);
-      textArea.focus();
+      div.appendChild(formComponent.form);
 
       leaveACommentButton.innerHTML = "Hide comment form";
       isFormVisible = true;
     } else if (isFormVisible === true) {
-      form.style.display = "none";
+      formComponent.hide();
       leaveACommentButton.innerHTML = "Leave a comment";
       isFormVisible = false;
     } else {
-      form.style.display = "block";
+      formComponent.show();
       leaveACommentButton.innerHTML = "Hide comment form";
       isFormVisible = true;
-      textArea.focus();
     }
   });
   return div;
 }
 
-function getCommentTestUI(comments: Comment[]) {
-  var ul = document.createElement("ul");
-  comments.forEach(comment => {
-    var li = document.createElement("li");
-    li.innerHTML = comment.authorName;
-    ul.appendChild(li);
+function getForm() {
+  var sendCallback: () => void;
+  var form = document.createElement("form");
+  form.addEventListener("submit", e => e.preventDefault());
+
+  var authorNameTextBox = document.createElement("input");
+  var authorNameLabel = document.createElement("label");
+  authorNameLabel.appendChild(document.createTextNode("Your name"));
+  authorNameLabel.appendChild(authorNameTextBox);
+
+  var textArea = document.createElement("textarea");
+  var textAreaLabel = document.createElement("label");
+  textAreaLabel.appendChild(document.createTextNode("Comment"));
+  textAreaLabel.appendChild(textArea);
+
+  var sendButton = document.createElement("button");
+  sendButton.innerHTML = "Send";
+  sendButton.addEventListener("click", () => {
+    if (sendCallback) sendCallback();
   });
-  return ul;
+
+  form.appendChild(textAreaLabel);
+  form.appendChild(authorNameLabel);
+  form.appendChild(sendButton);
+
+  return {
+    form: <HTMLElement>form,
+    focusTextarea: () => {
+      textArea.focus();
+    },
+    show: () => {
+      form.style.display = "block";
+    },
+    hide: () => {
+      form.style.display = "none";
+    },
+    reset: () => {
+      textArea.value = "";
+      authorNameTextBox.value = "";
+    },
+    sendClicked: (callback: () => void) => {
+      sendCallback = callback;
+    },
+    getComment: () => ({
+      text: textArea.value,
+      authorName: authorNameTextBox.value
+    })
+  };
 }
 
 function validateComment(comment: CommentBase) {
@@ -176,12 +191,13 @@ function commentsForPost(postUrl: string) {
 }
 
 function getSettings() {
-  //var azureUrl = "https://adw1blogcomments.azurewebsites.net/api";
-  var azureUrl = "http://localhost:7071/api";
+  var azureUrl = "https://adw1blogcomments.azurewebsites.net/api";
+  //var azureUrl = "http://localhost:7071/api";
   return {
     getCommentsUrl: (postUrl: string) =>
       `${azureUrl}/GetComments?postUrl=${encodeURIComponent(postUrl)}`,
-    newCommentUrl: () => `${azureUrl}/NewComment`
+    newCommentUrl: () => `${azureUrl}/NewComment`,
+    recaptchaSiteKey: () => "6Lc6rXIUAAAAAN16xUNrM3ONA6Gva8hvLku7LEfx"
   };
 }
 
@@ -197,4 +213,18 @@ interface Comment extends CommentBase {
 
 interface NewComment extends CommentBase {
   captchaToken: string;
+}
+
+interface FormComponent {
+  show: VoidFn;
+  hide: VoidFn;
+  reset: VoidFn;
+  focusTextarea: VoidFn;
+  form: HTMLElement;
+  sendClicked: (callback: VoidFn) => void;
+  getComment: () => { text: string; authorName: string };
+}
+
+interface VoidFn {
+  (): void;
 }
