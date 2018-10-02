@@ -56,7 +56,7 @@ function getCommentListUI(comments: Comment[]) {
   var ul = document.createElement("ul");
   comments.forEach(comment => {
     var li = document.createElement("li");
-    li.innerHTML = comment.authorName;
+    li.innerHTML = escapeHtml(comment.authorName);
     ul.appendChild(li);
   });
   return ul;
@@ -119,26 +119,36 @@ function getCommentUI(postUrl: string) {
 function getForm() {
   var sendCallback: () => void;
   var form = document.createElement("form");
-  form.addEventListener("submit", e => e.preventDefault());
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    if (sendCallback) sendCallback();
+  });
 
   var authorNameTextBox = document.createElement("input");
+  authorNameTextBox.setAttribute("required", "");
   var authorNameLabel = document.createElement("label");
   authorNameLabel.appendChild(document.createTextNode("Your name"));
   authorNameLabel.appendChild(authorNameTextBox);
 
   var textArea = document.createElement("textarea");
+  textArea.setAttribute("required", "");
   var textAreaLabel = document.createElement("label");
   textAreaLabel.appendChild(document.createTextNode("Comment"));
   textAreaLabel.appendChild(textArea);
 
+  var emailTextBox = document.createElement("input");
+  emailTextBox.setAttribute("required", "");
+  emailTextBox.setAttribute("type", "email");
+  var emailLabel = document.createElement("label");
+  emailLabel.appendChild(document.createTextNode("Your email"));
+  emailLabel.appendChild(emailTextBox);
+
   var sendButton = document.createElement("button");
   sendButton.innerHTML = "Send";
-  sendButton.addEventListener("click", () => {
-    if (sendCallback) sendCallback();
-  });
 
   form.appendChild(textAreaLabel);
   form.appendChild(authorNameLabel);
+  form.appendChild(emailLabel);
   form.appendChild(sendButton);
 
   return {
@@ -153,15 +163,15 @@ function getForm() {
       form.style.display = "none";
     },
     reset: () => {
-      textArea.value = "";
-      authorNameTextBox.value = "";
+      form.reset();
     },
     sendClicked: (callback: () => void) => {
       sendCallback = callback;
     },
     getComment: () => ({
       text: textArea.value,
-      authorName: authorNameTextBox.value
+      authorName: authorNameTextBox.value,
+      email: emailTextBox.value
     })
   };
 }
@@ -227,4 +237,24 @@ interface FormComponent {
 
 interface VoidFn {
   (): void;
+}
+
+function escapeHtml(input: string) {
+  // List of HTML entities for escaping.
+  var htmlEscapes: any = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#x27;",
+    "/": "&#x2F;"
+  };
+
+  // Regex containing the keys listed immediately above.
+  var htmlEscaper = /[&<>"'\/]/g;
+
+  // Escape a string for HTML interpolation.
+  return input.replace(htmlEscaper, function(match) {
+    return htmlEscapes[match];
+  });
 }
