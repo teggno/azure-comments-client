@@ -6,7 +6,8 @@
     "build": "webpack --config webpack.prod.js",
     "watch": "webpack --watch --config webpack.dev.js",
     "start": "webpack-dev-server --open --config webpack.dev.js",
-    "test": "karma start"
+    "test-watch": "karma start",
+    "test": "karma run"
   },
   "private": true,
   "keywords": [],
