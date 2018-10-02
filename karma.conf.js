@@ -14,7 +14,7 @@ module.exports = function(config) {
             module: webpackConfig.module,
             resolve: webpackConfig.resolve
         },
-        reporters: ["mocha-junit-reporter", "mocha"],
+        reporters: ["junit", "mocha"],
         port: 9876,
         colors: true,
         logLevel: config.LOG_INFO,
