@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "build": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
-    "start": "webpack-dev-server --open --mode development",
+    "build": "webpack --config webpack.prod.js",
+    "watch": "webpack --watch --config webpack.dev.js",
+    "start": "webpack-dev-server --open --config webpack.dev.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "private": true,
@@ -21,6 +21,7 @@
     "typescript": "^3.0.3",
     "webpack": "^4.20.2",
     "webpack-cli": "^3.1.1",
-    "webpack-dev-server": "^3.1.9"
+    "webpack-dev-server": "^3.1.9",
+    "webpack-merge": "^4.1.4"
   }
 }
