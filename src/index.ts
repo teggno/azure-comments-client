@@ -1,6 +1,8 @@
 import "whatwg-fetch";
 import escapeHtml from "./escape";
 import getSettings from "./settings";
+import getForm from "./commentForm";
+import getThreadTree from "./tree";
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("commentContainer");
@@ -64,6 +66,11 @@ function getCommentListUI(comments: Comment[]) {
   return ul;
 }
 
+
+type StringOrNumber = string|number;
+
+function getCommentListItemUI() {}
+
 function getCommentUI(postUrl: string) {
   var div = document.createElement("div");
   var leaveACommentButton = document.createElement("button");
@@ -102,7 +109,7 @@ function getCommentUI(postUrl: string) {
           });
       });
       div.appendChild(formComponent.form);
-
+      formComponent.focusTextarea();
       leaveACommentButton.innerHTML = "Hide comment form";
       isFormVisible = true;
     } else if (isFormVisible === true) {
@@ -111,71 +118,12 @@ function getCommentUI(postUrl: string) {
       isFormVisible = false;
     } else {
       formComponent.show();
+      formComponent.focusTextarea();
       leaveACommentButton.innerHTML = "Hide comment form";
       isFormVisible = true;
     }
   });
   return div;
-}
-
-function getForm() {
-  var sendCallback: () => void;
-  var form = document.createElement("form");
-  form.addEventListener("submit", e => {
-    e.preventDefault();
-    if (sendCallback) sendCallback();
-  });
-
-  var authorNameTextBox = document.createElement("input");
-  authorNameTextBox.setAttribute("required", "");
-  var authorNameLabel = document.createElement("label");
-  authorNameLabel.appendChild(document.createTextNode("Your name"));
-  authorNameLabel.appendChild(authorNameTextBox);
-
-  var textArea = document.createElement("textarea");
-  textArea.setAttribute("required", "");
-  var textAreaLabel = document.createElement("label");
-  textAreaLabel.appendChild(document.createTextNode("Comment"));
-  textAreaLabel.appendChild(textArea);
-
-  var emailTextBox = document.createElement("input");
-  emailTextBox.setAttribute("required", "");
-  emailTextBox.setAttribute("type", "email");
-  var emailLabel = document.createElement("label");
-  emailLabel.appendChild(document.createTextNode("Your email"));
-  emailLabel.appendChild(emailTextBox);
-
-  var sendButton = document.createElement("button");
-  sendButton.innerHTML = "Send";
-
-  form.appendChild(textAreaLabel);
-  form.appendChild(authorNameLabel);
-  form.appendChild(emailLabel);
-  form.appendChild(sendButton);
-
-  return {
-    form: <HTMLElement>form,
-    focusTextarea: () => {
-      textArea.focus();
-    },
-    show: () => {
-      form.style.display = "block";
-    },
-    hide: () => {
-      form.style.display = "none";
-    },
-    reset: () => {
-      form.reset();
-    },
-    sendClicked: (callback: () => void) => {
-      sendCallback = callback;
-    },
-    getComment: () => ({
-      text: textArea.value,
-      authorName: authorNameTextBox.value,
-      email: emailTextBox.value
-    })
-  };
 }
 
 function validateComment(comment: CommentBase) {
