@@ -33,11 +33,17 @@ function getCommentListUIWithButton(postUrl: string) {
           .then(putCommentsIntoTree)
           .then(list.displayComments)
       );
+      list.replyClicked(rowKey => {
+        
+      });
+
       commentsForPost(postUrl)
         .then(putCommentsIntoTree)
         .then(list.displayComments)
         .then(() => {
           div.appendChild(list.list);
+          showCommentsButton.innerHTML = "Hide comments";
+          isListVisible = true;
         });
     } else if (isListVisible === true) {
       list.hide();
@@ -140,6 +146,7 @@ function putCommentsIntoTree(comments: CommentFromApi[]) {
       tgt.authorName = src.authorName;
       tgt.authorEmail = src.authorEmail;
       tgt.text = src.text;
+      tgt.rowKey = src.rowKey;
       return tgt;
     },
     comments
@@ -184,5 +191,6 @@ interface CommentList {
   show: VoidFn;
   hide: VoidFn;
   refreshClicked(callback: VoidFn): void;
+  replyClicked(callback: (rowKey:string) => void): void;
   displayComments(comments: ThreadedComment[]): void;
 }
