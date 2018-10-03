@@ -1,5 +1,6 @@
 import escapeHtml from "./escape";
 import { VoidFn } from "./common";
+import createElement from "./htmlBuilder";
 import "./commentList.css";
 
 export function getCommentList() {
@@ -32,32 +33,30 @@ export function getCommentList() {
     displayComments: (comments: ThreadedComment[]) => {
       if (ul) div.removeChild(ul);
 
-      ul = document.createElement("ul");
-      ul.setAttribute("class", "comment-list");
-      comments.forEach(comment => {
-        var li = document.createElement("li");
-        li.setAttribute("class", "comment-list-item");
+      ul = createElement("ul")
+        .attribute("class", "comment-list")
+        .withChildren(
+          comments.map(comment => {
+            var authorNameEscaped = escapeHtml(comment.authorName);
 
-        var authorNameEscaped = escapeHtml(comment.authorName);
-        var authorNameDiv = document.createElement("div");
-        authorNameDiv.innerHTML = authorNameEscaped;
-        authorNameDiv.setAttribute("class", "author-name");
-        li.appendChild(authorNameDiv);
-
-        var textDiv = document.createElement("div");
-        textDiv.innerHTML = escapeHtml(comment.text);
-        textDiv.setAttribute("class", "comment-text");
-        li.appendChild(textDiv);
-
-        var replyButton = document.createElement("button");
-        replyButton.innerHTML = `Reply to ${authorNameEscaped}`;
-        replyButton.addEventListener("click", () => {
-          if (replyCallback) replyCallback(comment.rowKey);
-        });
-        li.appendChild(replyButton);
-
-        ul.appendChild(li);
-      });
+            return createElement("li")
+              .attribute("class", "comment-list-item")
+              .withChildren([
+                createElement("div")
+                  .attribute("class", "author-name")
+                  .innerHTML(authorNameEscaped),
+                createElement("div")
+                  .attribute("class", "comment-text")
+                  .innerHTML(escapeHtml(comment.text)),
+                createElement("button")
+                  .innerHTML(`Reply to ${authorNameEscaped}`)
+                  .addEventListener("click", () => {
+                    if (replyCallback) replyCallback(comment.rowKey);
+                  })
+              ]);
+          })
+        )
+        .build();
       div.appendChild(ul);
     }
   };

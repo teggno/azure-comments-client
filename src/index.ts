@@ -34,7 +34,7 @@ function getCommentListUIWithButton(postUrl: string) {
           .then(list.displayComments)
       );
       list.replyClicked(rowKey => {
-        
+        console.log(rowKey);
       });
 
       commentsForPost(postUrl)
