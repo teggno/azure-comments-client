@@ -1,5 +1,4 @@
 .settings/
-.vscode/
 
 node_modules
 dist/main.js

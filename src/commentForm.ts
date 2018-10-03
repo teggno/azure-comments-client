@@ -1,5 +1,7 @@
+import {VoidFn} from "./common";
+
 export default function() {
-  var sendCallback: () => void;
+  var sendCallback: VoidFn;
   var form = document.createElement("form");
   form.addEventListener("submit", e => {
     e.preventDefault();
@@ -50,10 +52,10 @@ export default function() {
     reset: () => {
       form.reset();
     },
-    sendClicked: (callback: () => void) => {
+    sendClicked: (callback: VoidFn) => {
       sendCallback = callback;
     },
-    getComment: () => ({
+    getEnteredData: () => ({
       text: textArea.value,
       authorName: authorNameTextBox.value,
       email: emailTextBox.value

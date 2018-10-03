@@ -1,44 +1,57 @@
-export default function buildTree<TItem>(
+export default function buildTree<
+  TItem,
+  TResultItem extends { children: TResultItem[] }
+>(
   idAccessor: (item: TItem) => string,
   parentIdAccessor: (item: TItem) => string | null,
-  items: TItem[]
-): Wrapper<TItem>[] {
-  var dict: { [id: string]: InnerWrapper<TItem> } = {};
-  items.forEach(item => {
-    var id = idAccessor(item);
-    var parentId = parentIdAccessor(item);
+  resultItemFactory: (source?: TItem) => TResultItem,
+  resultItemWriter: (source: TItem, target: TResultItem) => TResultItem,
+  sourceList: TItem[]
+): TResultItem[] {
+  var dict: {
+    [id: string]: { id: string; sourceItem?: TItem; resultItem: TResultItem };
+  } = {};
+  sourceList.forEach(src => {
+    var id = idAccessor(src);
     var dictItem = dict[id];
-    if (!dictItem) dictItem = dict[id] = { item: item, children: [] };
+    if (dictItem) {
+      if (!dictItem.sourceItem) {
+        dictItem.sourceItem = src;
+        resultItemWriter(src, dictItem.resultItem);
+      }
+    } else {
+      dictItem = dict[id] = {
+        id: id,
+        sourceItem: src,
+        resultItem: resultItemWriter(src, resultItemFactory())
+      };
+    }
+    var parentId = parentIdAccessor(src);
     if (parentId) {
       var parentDictItem = dict[parentId];
-      if (!parentDictItem) parentDictItem = dict[parentId] = { children: [] };
-      parentDictItem.children.push(dictItem);
+      if (!parentDictItem) {
+        parentDictItem = dict[parentId] = {
+          id: parentId,
+          resultItem: resultItemFactory()
+        };
+      }
+      parentDictItem.resultItem.children.push(dictItem.resultItem);
     }
   });
-  var result: InnerWrapper<TItem>[] = [];
+  var result: TResultItem[] = [];
+
+  // dict contains an item of type TResultItem for each source item
   for (var id in dict) {
-    var InnerWrapper = dict[id];
-    if (!InnerWrapper.item && InnerWrapper.children[0]) {
-      var firstChildItem = InnerWrapper.children[0].item;
-      if (firstChildItem)
-        throw new Error(
-          `A non root item has ${parentIdAccessor(
-            firstChildItem
-          )} as parent id but that parent is missing in the input.`
-        );
+    var dictItem = dict[id];
+    if (!dictItem.sourceItem) {
+      throw new Error(
+        `A non root item has ${
+          dictItem.id
+        } as parent id but that parent is missing in the input.`
+      );
     }
-    if (InnerWrapper.item && !parentIdAccessor(InnerWrapper.item))
-      result.push({ item: InnerWrapper.item, children: InnerWrapper.children });
+    if (!parentIdAccessor(dictItem.sourceItem))
+      result.push(dictItem.resultItem);
   }
-  return <Wrapper<TItem>[]>result; // we can do this cast because we know that at this point there is no wrapper with an item that is undefined.
-}
-
-interface InnerWrapper<TItem> {
-  item?: TItem;
-  children: InnerWrapper<TItem>[];
-}
-
-interface Wrapper<TItem> {
-  item: TItem;
-  children: Wrapper<TItem>[];
+  return result;
 }

@@ -1,7 +1,8 @@
 import "whatwg-fetch";
-import escapeHtml from "./escape";
 import getSettings from "./settings";
 import getForm from "./commentForm";
+import { getCommentList, ThreadedComment } from "./commentList";
+import { VoidFn } from "./common";
 import getThreadTree from "./tree";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -20,56 +21,36 @@ function getCommentListUIWithButton(postUrl: string) {
   div.appendChild(showCommentsButton);
 
   var isListVisible: boolean | null = null;
-  var list: HTMLDivElement;
+  var list: CommentList;
+
   showCommentsButton.addEventListener("click", () => {
     if (isListVisible === null) {
       // list has never ever been displayed
-      list = document.createElement("div");
-      var refreshButton = document.createElement("button");
-      refreshButton.innerHTML = "Refresh comments";
-      var ul: HTMLElement;
-      refreshButton.addEventListener("click", () => {
-        commentsForPost(postUrl).then(comments => {
-          list.removeChild(ul);
-          ul = getCommentListUI(comments);
-          list.appendChild(ul);
+      list = getCommentList();
+
+      list.refreshClicked(() =>
+        commentsForPost(postUrl)
+          .then(putCommentsIntoTree)
+          .then(list.displayComments)
+      );
+      commentsForPost(postUrl)
+        .then(putCommentsIntoTree)
+        .then(list.displayComments)
+        .then(() => {
+          div.appendChild(list.list);
         });
-      });
-      commentsForPost(postUrl).then(comments => {
-        list.appendChild(refreshButton);
-        ul = getCommentListUI(comments);
-        list.appendChild(ul);
-        showCommentsButton.innerHTML = "Hide comments";
-        isListVisible = true;
-        div.appendChild(list);
-      });
     } else if (isListVisible === true) {
-      list.style.display = "none";
+      list.hide();
       showCommentsButton.innerHTML = "ShowComments";
       isListVisible = false;
     } else {
-      list.style.display = "block";
+      list.show();
       showCommentsButton.innerHTML = "Hide comments";
       isListVisible = true;
     }
   });
   return div;
 }
-
-function getCommentListUI(comments: Comment[]) {
-  var ul = document.createElement("ul");
-  comments.forEach(comment => {
-    var li = document.createElement("li");
-    li.innerHTML = escapeHtml(comment.authorName);
-    ul.appendChild(li);
-  });
-  return ul;
-}
-
-
-type StringOrNumber = string|number;
-
-function getCommentListItemUI() {}
 
 function getCommentUI(postUrl: string) {
   var div = document.createElement("div");
@@ -79,14 +60,14 @@ function getCommentUI(postUrl: string) {
   div.appendChild(leaveACommentButton);
 
   var isFormVisible: boolean | null = null;
-  var formComponent: FormComponent;
+  var formComponent: CommentForm;
 
   leaveACommentButton.addEventListener("click", () => {
     if (isFormVisible === null) {
       // form has never ever been displayed
       formComponent = getForm();
       formComponent.sendClicked(() => {
-        var input = formComponent.getComment();
+        var input = formComponent.getEnteredData();
         var comment = {
           text: input.text,
           authorName: input.authorName,
@@ -147,7 +128,31 @@ function commentsForPost(postUrl: string) {
   var url = getSettings().getCommentsUrl(postUrl);
   return fetch(url)
     .then(response => response.json())
-    .then(json => <Comment[]>json);
+    .then(json => <CommentFromApi[]>json);
+}
+
+function putCommentsIntoTree(comments: CommentFromApi[]) {
+  return getThreadTree(
+    c => c.rowKey,
+    c => c.parentRowKey,
+    () => <ThreadedComment>{},
+    (src, tgt) => {
+      tgt.authorName = src.authorName;
+      tgt.authorEmail = src.authorEmail;
+      tgt.text = src.text;
+      return tgt;
+    },
+    comments
+  );
+}
+
+interface CommentFromApi {
+  authorName: string;
+  postUrl: string;
+  rowKey: string;
+  parentRowKey: string;
+  authorEmail: string;
+  text: string;
 }
 
 interface CommentBase {
@@ -164,16 +169,20 @@ interface NewComment extends CommentBase {
   captchaToken: string;
 }
 
-interface FormComponent {
+interface CommentForm {
   show: VoidFn;
   hide: VoidFn;
   reset: VoidFn;
   focusTextarea: VoidFn;
   form: HTMLElement;
   sendClicked: (callback: VoidFn) => void;
-  getComment: () => { text: string; authorName: string };
+  getEnteredData: () => { text: string; authorName: string };
 }
 
-interface VoidFn {
-  (): void;
+interface CommentList {
+  list: HTMLElement;
+  show: VoidFn;
+  hide: VoidFn;
+  refreshClicked(callback: VoidFn): void;
+  displayComments(comments: ThreadedComment[]): void;
 }
