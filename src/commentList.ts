@@ -41,11 +41,19 @@ export function getCommentList() {
 }
 
 function getUl(comments: ThreadedComment[], replyCallback: ReplyCallback) {
-  return createElement("ul")
-    .attribute("class", "comment-list")
-    .withChildren(
-      comments.map(comment => getSingleCommentListItem(comment, replyCallback))
-    );
+  if (comments.length) {
+    return createElement("ul")
+      .attribute("class", "comment-list")
+      .withChildren(
+        comments.map(comment =>
+          getSingleCommentListItem(comment, replyCallback)
+        )
+      );
+  }
+
+  return createElement("div")
+    .attribute("class", "no-comments-message")
+    .innerHTML("This post doesn't have any comments yet.");
 }
 
 function getSingleCommentListItem(
