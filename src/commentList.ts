@@ -5,7 +5,7 @@ import "./commentList.css";
 
 export function getCommentList() {
   var refreshCallback: VoidFn;
-  var replyCallback: (rowKey: string) => void;
+  var replyCallback: ReplyCallback;
   var div = document.createElement("div");
   var refreshButton = document.createElement("button");
   refreshButton.innerHTML = "Refresh comments";
@@ -27,39 +27,57 @@ export function getCommentList() {
     refreshClicked: (callback: VoidFn) => {
       refreshCallback = callback;
     },
-    replyClicked: (callback: (rowKey: string) => void) => {
+    replyClicked: (callback: ReplyCallback) => {
       replyCallback = callback;
     },
     displayComments: (comments: ThreadedComment[]) => {
       if (ul) div.removeChild(ul);
 
-      ul = createElement("ul")
-        .attribute("class", "comment-list")
-        .withChildren(
-          comments.map(comment => {
-            var authorNameEscaped = escapeHtml(comment.authorName);
+      ul = getUl(comments, replyCallback).build();
 
-            return createElement("li")
-              .attribute("class", "comment-list-item")
-              .withChildren([
-                createElement("div")
-                  .attribute("class", "author-name")
-                  .innerHTML(authorNameEscaped),
-                createElement("div")
-                  .attribute("class", "comment-text")
-                  .innerHTML(escapeHtml(comment.text)),
-                createElement("button")
-                  .innerHTML(`Reply to ${authorNameEscaped}`)
-                  .addEventListener("click", () => {
-                    if (replyCallback) replyCallback(comment.rowKey);
-                  })
-              ]);
-          })
-        )
-        .build();
       div.appendChild(ul);
     }
   };
+}
+
+function getUl(comments: ThreadedComment[], replyCallback: ReplyCallback) {
+  return createElement("ul")
+    .attribute("class", "comment-list")
+    .withChildren(
+      comments.map(comment => getSingleCommentListItem(comment, replyCallback))
+    );
+}
+
+function getSingleCommentListItem(
+  comment: ThreadedComment,
+  replyCallback: ReplyCallback
+) {
+  var authorNameEscaped = escapeHtml(comment.authorName);
+
+  var formPlaceholder = createElement("div").build();
+
+  var liBuilder = createElement("li")
+    .attribute("class", "comment-list-item")
+    .withChildren([
+      createElement("div")
+        .attribute("class", "author-name")
+        .innerHTML(authorNameEscaped),
+      createElement("div")
+        .attribute("class", "comment-text")
+        .innerHTML(escapeHtml(comment.text)),
+      createElement("button")
+        .innerHTML(`Reply to ${authorNameEscaped}`)
+        .addEventListener("click", e => {
+          if (replyCallback) replyCallback(comment.rowKey, <HTMLButtonElement>e.currentTarget, formPlaceholder);
+        }),
+      () => formPlaceholder
+    ]);
+
+  if (comment.children && comment.children.length) {
+    liBuilder.withChildren([getUl(comment.children, replyCallback)]);
+  }
+
+  return liBuilder;
 }
 
 export interface ThreadedComment {
@@ -69,4 +87,8 @@ export interface ThreadedComment {
   authorEmail: string;
   date: Date;
   children: ThreadedComment[];
+}
+
+export interface ReplyCallback {
+  (rowKey: string, button: HTMLElement, placeholderForForm: HTMLElement): void;
 }

@@ -1,7 +1,7 @@
 import "whatwg-fetch";
 import getSettings from "./settings";
 import getForm from "./commentForm";
-import { getCommentList, ThreadedComment } from "./commentList";
+import { getCommentList, ThreadedComment, ReplyCallback } from "./commentList";
 import { VoidFn } from "./common";
 import getThreadTree from "./tree";
 
@@ -33,8 +33,26 @@ function getCommentListUIWithButton(postUrl: string) {
           .then(putCommentsIntoTree)
           .then(list.displayComments)
       );
-      list.replyClicked(rowKey => {
-        console.log(rowKey);
+      list.replyClicked((rowKey, replyButton, placeholderForForm) => {
+        var formComponent = getForm();
+        replyButton.setAttribute("disabled", "disabled");
+        formComponent.sendClicked(() => {
+          var input = formComponent.getEnteredData();
+          if (!validateComment(input)) {
+            return;
+          }
+          var comment = createComment(input, postUrl);
+          comment.parentRowKey = rowKey;
+          captchaAndSave(comment).then(() => {
+            placeholderForForm.removeChild(formComponent.form);
+            replyButton.removeAttribute("disabled");
+          });
+        });
+        formComponent.cancelClicked(() => {
+          placeholderForForm.removeChild(formComponent.form);
+          replyButton.removeAttribute("disabled");
+        });
+        placeholderForForm.appendChild(formComponent.form);
       });
 
       commentsForPost(postUrl)
@@ -65,55 +83,59 @@ function getCommentUI(postUrl: string) {
 
   div.appendChild(leaveACommentButton);
 
-  var isFormVisible: boolean | null = null;
   var formComponent: CommentForm;
 
   leaveACommentButton.addEventListener("click", () => {
-    if (isFormVisible === null) {
+    if (!formComponent) {
       // form has never ever been displayed
       formComponent = getForm();
       formComponent.sendClicked(() => {
         var input = formComponent.getEnteredData();
-        var comment = {
-          text: input.text,
-          authorName: input.authorName,
-          postUrl: postUrl,
-          captchaToken: ""
-        };
-        if (!validateComment(comment)) {
+        if (!validateComment(input)) {
           return;
         }
-
-        (<any>grecaptcha)
-          .execute(getSettings().recaptchaSiteKey(), {
-            action: "newComment"
-          })
-          .then((token: string) => {
-            comment.captchaToken = token;
-            return saveComment(comment).then(() => {
-              formComponent.reset();
-            });
-          });
+        var comment = createComment(input, postUrl);
+        captchaAndSave(comment).then(() => {
+          formComponent.reset();
+          formComponent.hide();
+          leaveACommentButton.removeAttribute("disabled");
+        });
+      });
+      formComponent.cancelClicked(() => {
+        formComponent.hide();
+        leaveACommentButton.removeAttribute("disabled");
       });
       div.appendChild(formComponent.form);
-      formComponent.focusTextarea();
-      leaveACommentButton.innerHTML = "Hide comment form";
-      isFormVisible = true;
-    } else if (isFormVisible === true) {
-      formComponent.hide();
-      leaveACommentButton.innerHTML = "Leave a comment";
-      isFormVisible = false;
     } else {
       formComponent.show();
-      formComponent.focusTextarea();
-      leaveACommentButton.innerHTML = "Hide comment form";
-      isFormVisible = true;
     }
+    formComponent.focusTextarea();
+    leaveACommentButton.setAttribute("disabled", "disabled");
   });
   return div;
 }
 
-function validateComment(comment: CommentBase) {
+function captchaAndSave(comment: NewComment) {
+  return (<any>grecaptcha)
+    .execute(getSettings().recaptchaSiteKey(), {
+      action: "newComment"
+    })
+    .then((token: string) => {
+      comment.captchaToken = token;
+      return saveComment(comment);
+    });
+}
+
+function createComment(input: EnteredComment, postUrl: string): NewComment {
+  return {
+    text: input.text,
+    authorName: input.authorName,
+    postUrl: postUrl,
+    captchaToken: ""
+  };
+}
+
+function validateComment(comment: EnteredComment) {
   return comment.authorName !== "" && comment.text != "";
 }
 
@@ -162,18 +184,12 @@ interface CommentFromApi {
   text: string;
 }
 
-interface CommentBase {
+interface NewComment {
   authorName: string;
   postUrl: string;
   text: string;
-}
-
-interface Comment extends CommentBase {
-  rowKey: string;
-}
-
-interface NewComment extends CommentBase {
   captchaToken: string;
+  parentRowKey?: string;
 }
 
 interface CommentForm {
@@ -183,7 +199,14 @@ interface CommentForm {
   focusTextarea: VoidFn;
   form: HTMLElement;
   sendClicked: (callback: VoidFn) => void;
-  getEnteredData: () => { text: string; authorName: string };
+  cancelClicked: (callback: VoidFn) => void;
+  getEnteredData: () => EnteredComment;
+}
+
+interface EnteredComment {
+  text: string;
+  authorName: string;
+  email: string;
 }
 
 interface CommentList {
@@ -191,6 +214,6 @@ interface CommentList {
   show: VoidFn;
   hide: VoidFn;
   refreshClicked(callback: VoidFn): void;
-  replyClicked(callback: (rowKey:string) => void): void;
+  replyClicked(callback: ReplyCallback): void;
   displayComments(comments: ThreadedComment[]): void;
 }

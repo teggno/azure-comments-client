@@ -3,6 +3,7 @@ import createElement from "./htmlBuilder";
 
 export default function() {
   var sendCallback: VoidFn;
+  var cancelCallback: VoidFn;
   var textArea: HTMLTextAreaElement;
   var authorNameTextBox: HTMLInputElement;
   var emailTextBox: HTMLInputElement;
@@ -29,7 +30,6 @@ export default function() {
       createElement("label").withChildren([
         () => document.createTextNode("Your email"),
         createElement("input", e => (emailTextBox = e))
-          .attribute("required", "")
           .attribute("name", "email")
           .attribute("type", "email")
       ]),
@@ -39,7 +39,12 @@ export default function() {
         .addEventListener("click", () => {
           if (sendCallback) sendCallback();
         }),
-      createElement("button").innerHTML("Cancel")
+      createElement("button")
+        .innerHTML("Cancel")
+        .attribute("type", "button")
+        .addEventListener("click", () => {
+          if (cancelCallback) cancelCallback();
+        })
     ])
     .build();
 
@@ -59,6 +64,9 @@ export default function() {
     },
     sendClicked: (callback: VoidFn) => {
       sendCallback = callback;
+    },
+    cancelClicked: (callback: VoidFn) => {
+      cancelCallback = callback;
     },
     getEnteredData: () => ({
       text: textArea.value,
