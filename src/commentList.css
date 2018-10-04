@@ -4,6 +4,10 @@
   padding: 0;
 }
 
+.comment-list-item > .comment-list {
+  margin-left: 1%;
+}
+
 .comment-list-item:nth-child(2n+1){
   background-color: gainsboro;
 }

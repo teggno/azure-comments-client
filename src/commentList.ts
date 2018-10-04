@@ -63,12 +63,20 @@ function getSingleCommentListItem(
         .attribute("class", "author-name")
         .innerHTML(authorNameEscaped),
       createElement("div")
+        .attribute("class", "created-timestamp")
+        .innerHTML(comment.createdTimestampUtc.toLocaleString()),
+      createElement("div")
         .attribute("class", "comment-text")
         .innerHTML(escapeHtml(comment.text)),
       createElement("button")
         .innerHTML(`Reply to ${authorNameEscaped}`)
         .addEventListener("click", e => {
-          if (replyCallback) replyCallback(comment.rowKey, <HTMLButtonElement>e.currentTarget, formPlaceholder);
+          if (replyCallback)
+            replyCallback(
+              comment.rowKey,
+              <HTMLButtonElement>e.currentTarget,
+              formPlaceholder
+            );
         }),
       () => formPlaceholder
     ]);
@@ -84,8 +92,8 @@ export interface ThreadedComment {
   rowKey: string;
   text: string;
   authorName: string;
-  authorEmail: string;
-  date: Date;
+  email: string;
+  createdTimestampUtc: Date;
   children: ThreadedComment[];
 }
 

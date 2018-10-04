@@ -35,10 +35,7 @@ export default function() {
       ]),
 
       createElement("button")
-        .innerHTML("Send")
-        .addEventListener("click", () => {
-          if (sendCallback) sendCallback();
-        }),
+        .innerHTML("Send"),
       createElement("button")
         .innerHTML("Cancel")
         .attribute("type", "button")

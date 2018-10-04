@@ -130,7 +130,9 @@ function createComment(input: EnteredComment, postUrl: string): NewComment {
   return {
     text: input.text,
     authorName: input.authorName,
+    email: input.email,
     postUrl: postUrl,
+    createdTimestampUtc: new Date(),
     captchaToken: ""
   };
 }
@@ -156,19 +158,27 @@ function commentsForPost(postUrl: string) {
   var url = getSettings().getCommentsUrl(postUrl);
   return fetch(url)
     .then(response => response.json())
-    .then(json => <CommentFromApi[]>json);
+    .then(json => <CommentFromApi[]>json)
+    .then(comments =>
+      comments.sort(
+        (a, b) =>
+          // sort descending (newest first)
+          new Date(b.createdTimestampUtc).valueOf() - new Date(a.createdTimestampUtc).valueOf()
+      )
+    );
 }
 
 function putCommentsIntoTree(comments: CommentFromApi[]) {
   return getThreadTree(
     c => c.rowKey,
     c => c.parentRowKey,
-    () => <ThreadedComment>{},
+    () => <ThreadedComment>(<any>{ children: [] }),
     (src, tgt) => {
       tgt.authorName = src.authorName;
-      tgt.authorEmail = src.authorEmail;
+      tgt.email = src.email;
       tgt.text = src.text;
       tgt.rowKey = src.rowKey;
+      tgt.createdTimestampUtc = new Date(src.createdTimestampUtc);
       return tgt;
     },
     comments
@@ -180,8 +190,9 @@ interface CommentFromApi {
   postUrl: string;
   rowKey: string;
   parentRowKey: string;
-  authorEmail: string;
+  email: string;
   text: string;
+  createdTimestampUtc: string;
 }
 
 interface NewComment {
@@ -189,7 +200,9 @@ interface NewComment {
   postUrl: string;
   text: string;
   captchaToken: string;
+  createdTimestampUtc: Date;
   parentRowKey?: string;
+  email?: string;
 }
 
 interface CommentForm {
