@@ -188,7 +188,6 @@ function putCommentsIntoTree(comments: CommentFromApi[]) {
     () => <ThreadedComment>(<any>{ children: [] }),
     (src, tgt) => {
       tgt.authorName = src.authorName;
-      tgt.email = src.email;
       tgt.text = src.text;
       tgt.rowKey = src.rowKey;
       tgt.createdTimestampUtc = new Date(src.createdTimestampUtc);
@@ -203,7 +202,6 @@ interface CommentFromApi {
   postUrl: string;
   rowKey: string;
   parentRowKey: string;
-  email: string;
   text: string;
   createdTimestampUtc: string;
 }

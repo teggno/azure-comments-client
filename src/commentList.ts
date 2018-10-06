@@ -100,7 +100,6 @@ export interface ThreadedComment {
   rowKey: string;
   text: string;
   authorName: string;
-  email: string;
   createdTimestampUtc: Date;
   children: ThreadedComment[];
 }
