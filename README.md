@@ -27,3 +27,9 @@ To place the **show comments button** at a post you could
 * Provide the whole thing as a cheap service (i.e. support tenants (maybe just have an azure resource group for each tenant)). If do this, blog about it.
 * Add a react version.
 * When a comment author has provided an email address, he might want to get notified about replies to his comment. (must prevent spamming though)
+* Make Comment Administration/moderation available as a PWA
+
+### Moderation features
+* Get email notification upon new comments that have to be moderated. Email contains a link to a page where comment can be moderated.
+* Open a page with a list of comments that have to be moderated. List items are links to page described above. Must be logged in to see this pages and the comments shown there.
+

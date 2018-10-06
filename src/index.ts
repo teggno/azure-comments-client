@@ -1,9 +1,10 @@
-import "whatwg-fetch";
 import getSettings from "./settings";
 import getForm from "./commentForm";
 import { getCommentList, ThreadedComment, ReplyCallback } from "./commentList";
 import { VoidFn } from "./common";
 import getThreadTree from "./tree";
+import getCommentListLoadingIndicator from "./loadingIndicator";
+import showToast from "./toast";
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("commentContainer");
@@ -28,11 +29,17 @@ function getCommentListUIWithButton(postUrl: string) {
       // list has never ever been displayed
       list = getCommentList();
 
-      list.refreshClicked(() =>
+      var loadingIndicator = getCommentListLoadingIndicator();
+      loadingIndicator.hide();
+      div.appendChild(loadingIndicator.indicator);
+
+      list.refreshClicked(() => {
+        loadingIndicator.show();
         commentsForPost(postUrl)
           .then(putCommentsIntoTree)
           .then(list.displayComments)
-      );
+          .then(loadingIndicator.hide);
+      });
       list.replyClicked((rowKey, replyButton, placeholderForForm) => {
         var formComponent = getForm();
         replyButton.setAttribute("disabled", "disabled");
@@ -46,6 +53,7 @@ function getCommentListUIWithButton(postUrl: string) {
           captchaAndSave(comment).then(() => {
             placeholderForForm.removeChild(formComponent.form);
             replyButton.removeAttribute("disabled");
+            showToast("We have received your comment and it will appear shortly.");
           });
         });
         formComponent.cancelClicked(() => {
@@ -55,10 +63,12 @@ function getCommentListUIWithButton(postUrl: string) {
         placeholderForForm.appendChild(formComponent.form);
       });
 
+      loadingIndicator.show();
       commentsForPost(postUrl)
         .then(putCommentsIntoTree)
         .then(list.displayComments)
         .then(() => {
+          loadingIndicator.hide();
           div.appendChild(list.list);
           showCommentsButton.innerHTML = "Hide comments";
           isListVisible = true;
@@ -99,6 +109,7 @@ function getCommentUI(postUrl: string) {
           formComponent.reset();
           formComponent.hide();
           leaveACommentButton.removeAttribute("disabled");
+          showToast("We have received your comment and it will appear shortly.");
         });
       });
       formComponent.cancelClicked(() => {
@@ -125,6 +136,7 @@ function captchaAndSave(comment: NewComment) {
       return saveComment(comment);
     });
 }
+
 
 function createComment(input: EnteredComment, postUrl: string): NewComment {
   return {
@@ -163,7 +175,8 @@ function commentsForPost(postUrl: string) {
       comments.sort(
         (a, b) =>
           // sort descending (newest first)
-          new Date(b.createdTimestampUtc).valueOf() - new Date(a.createdTimestampUtc).valueOf()
+          new Date(b.createdTimestampUtc).valueOf() -
+          new Date(a.createdTimestampUtc).valueOf()
       )
     );
 }

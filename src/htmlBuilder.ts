@@ -18,7 +18,13 @@ export default function<K extends keyof HTMLElementTagNameMap>(
       return builder;
     },
     /**
-     * Can be called multiple times.
+     * Only call once. Otherwise last call (before call to build()) wins.
+     */
+    class: (classNames: string) => {
+      return builder.attribute("class", classNames);
+    },
+    /**
+     * Can be called multiple times. Each time with a different attribute.
      */
     attribute: (name: string, value: string) => {
       var existingFunction = buildFunctions["attribute"];
